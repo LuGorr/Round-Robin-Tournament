@@ -25,20 +25,20 @@ constraint forall(w in 1..weeks, t in 1..n)(
     ) == 1
 );
 
-% --- Constraint 3: No team appears more than 2 times in the same period across all weeks ---
+%No team appears more than 2 times in the same period across all weeks ---
 constraint forall(p in 1..periods, t in 1..n)(
     sum(w in 1..weeks)(
         (home_team[w, p] == t) + (away_team[w, p] == t)
     ) <= 2
 );
 
-% No self matches
+%No self matches
 constraint forall(w in 1..weeks, p in 1..periods)(
     home_team[w, p] != away_team[w, p]
 );
 
-% Symmetry breaking (optional, helps solver)
-%constraint home_team[1,1] < away_team[1,1];
+%Symmetry breaking (optional, helps solver)
+constraint home_team[1,1] < away_team[1,1];
 
 solve satisfy;
 
