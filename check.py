@@ -1,11 +1,7 @@
 '''
 This program works by doing "minizinc --json-stream --param-file 
 "solver-configs/10-solve-gecode.mpc" CP/multi_data_rep.mzn > CP/test.json" 
-(pwd CDMO folder). 
-The output in test.json won't be formatted properly (still to figure out) 
-so you need to add 
-"{"sols":[" at the start of file, 
-a comma at the end of every line except last where you add "}".
+(pwd CDMO folder).
 '''
 import json
 import os
@@ -68,10 +64,26 @@ def check(home, away, err):
     return err
 #Get path (needs to be more general, maybe cli input)
 path = os.getcwd() + "/CP/test.json"
-
 #Open json
-with open(path, 'r') as file:
-    data = json.load(file)
+try:
+    with open(path, 'r') as f:
+        data = json.load(f)
+except:
+    with open(path, 'r') as f:
+        original = f.read()
+    with open(path, 'w') as f:
+        f.write("{\"sols\":[" + original)
+    with open(path, "r") as f:
+        lines = f.readlines()
+
+    with open(path, "w") as f:
+        for i, line in enumerate(lines):
+            if i < len(lines) - 1:
+                f.write(line.rstrip("\n") + ",\n")
+            else:
+                f.write(line.rstrip("\n") + "]}\n")
+    with open(path, "r") as f:
+        data = json.load(f)
 home = []
 away = []
 sols = []
