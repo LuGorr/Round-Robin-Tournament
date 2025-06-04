@@ -1,6 +1,6 @@
 '''
-This program works by doing "minizinc --json-stream --param-file 
-"solver-configs/10-solve-gecode.mpc" CP/multi_data_rep.mzn > CP/test.json" 
+This program works by executing
+"minizinc --statistics --json-stream --param-file "solver-configs/10-solve-gecode.mpc" CP/multi_data_rep.mzn > CP/test.json" 
 (pwd CDMO folder).
 '''
 import json
@@ -87,12 +87,14 @@ except:
 home = []
 away = []
 sols = []
+i = 0
 #Loads the results (needs to be more general, if the ouput of another method differs it doesn't work)
-for i, elem in enumerate(data["sols"]):
-    sols.append(ast.literal_eval(elem["output"]["default"]))
-    home.append(sols[i][0])
-    away.append(sols[i][1])
-
+for elem in data["sols"]:
+    if(elem["type"]=="solution"):
+        sols.append(ast.literal_eval(elem["output"]["default"]))
+        home.append(sols[i][0])
+        away.append(sols[i][1])
+        i += 1
 err = []
 for i in range(len(home)):
     err.append(check(home[i], away[i], False))

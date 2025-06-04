@@ -1,5 +1,5 @@
 include "alldifferent.mzn";
-int: n = 6;  % Number of teams (even)
+int: n = 10;  % Number of teams (even)
 int: weeks = n - 1;
 int: periods = n div 2;
 
@@ -49,7 +49,12 @@ constraint forall(p in 1..periods, t in 1..n)(
 );
 
 
-solve satisfy;
+solve :: int_search(
+    [home_team[w,p] | w in 1..weeks, p in 1..periods] ++
+    [away_team[w,p] | w in 1..weeks, p in 1..periods],
+    dom_w_deg,
+    indomain_min
+        ) :: restart_linear(1) satisfy;%Output in json format
 
 %Output in json format
 output [showJSON([home_team, away_team])];
