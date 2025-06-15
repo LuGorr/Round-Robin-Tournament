@@ -1,0 +1,5 @@
+{
+    "intermediate-solutions": true,
+    "output-objective": true,
+    "solver": "org.minizinc.mip.coin-bc@2.10.12/1.17.10"
+}
