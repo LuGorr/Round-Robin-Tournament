@@ -48,9 +48,9 @@ else
 
 #echo $json > "CP/test.json"
   formatted_sol=$((echo $json | jq  '.output.default | select(. != null)') | awk '{
-  first_bracket = index($0, "$") + 1
+  first_bracket = index($0, "$") + 2
   tmp = substr($0, first_bracket)
-  last_bracket = length(tmp)-1
+  last_bracket = length(tmp)-2
   print substr(tmp, 0, last_bracket)
   }');
   if [ "$(echo $s | grep "coinbc")" != "" -o "$(echo $s | grep "ortools")" != "" ]; then
