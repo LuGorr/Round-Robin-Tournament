@@ -1,18 +1,15 @@
 include "globals.mzn";
 
+
 int: n;
 int: weeks = n - 1;
 int: periods = n div 2;
-var int: obj;
-
-ann: search_ann = int_search([schedule[w,p,s] | w in 1..weeks, p in 1..periods, s in 1..2],first_fail, indomain_min, complete)::restart_luby(n*100);
 array[1..weeks, 1..periods, 1..2] of var 1..n: schedule;
 array[1..periods,1..weeks] of var 1..n: home_team;
 array[1..periods,1..weeks] of var 1..n: away_team;
+array[1..periods, 1..weeks] of array[1..2] of var 1..n: out;
 array[1..n, 1..n] of var 0..((n*(n-1))div 2): matches::computed_domain;
 array[1..weeks, 1..periods] of var 1..((n*(n-1))div 2): match_pair;
-array[1..periods, 1..weeks] of array[1..2] of var 1..n: out;
-
 
 % Constraint 1
 constraint forall(t in 1..n, w in 1..weeks)(
@@ -79,10 +76,9 @@ constraint forall(w in 1..weeks, p in 1..periods)(
     home_team[p,w] = schedule[w,p,1] /\
     away_team[p,w] = schedule[w,p,2]
 );
-% Constraint 12
-constraint obj == n::domain_propagation;
-constraint obj == sum(i in 1..n)(abs(count([schedule[w,p,1] | w in 1..weeks, p in 1..periods], i) - 
-    count([schedule[w,p,2] | w in 1..weeks, p in 1..periods], i)));
 
-solve ::search_ann minimize obj;
-output [showJSON([out]),"$",showJSON([obj])];
+
+
+solve ::int_search([schedule[w,p,s] | w in 1..weeks, p in 1..periods, s in 1..2],
+        first_fail, indomain_split, complete)::restart_luby(100) satisfy;
+output [showJSON([schedule[w,p,s] | w in 1..weeks, p in 1..periods, s in 1..2]), "$", showJSON([out])]
