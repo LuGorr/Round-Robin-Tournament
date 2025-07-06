@@ -1,0 +1,5 @@
+{
+    "intermediate-solutions": true,
+    "output-objective": true,
+    "solver": "cp-sat@9.12.4544"
+}
