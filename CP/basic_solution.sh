@@ -34,8 +34,8 @@ elif [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNKNO
 else
   optimal="false"
   formatted_sol=$(echo $json | jq   '.output.default | select(. != null)');
-  formatted_sol="${formatted_sol#\"}";
-  formatted_sol="${formatted_sol%\"}";
+  formatted_sol="${formatted_sol#\"'['}";
+  formatted_sol="${formatted_sol%']'\"}";
   if [ "$(echo $s | grep "coinbc")" != "" ]; then
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null" | head -n 1)
   else

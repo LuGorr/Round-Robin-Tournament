@@ -48,8 +48,8 @@ else
   fi
 
   formatted_sol=$(echo $json | jq -r ".output.default | select(. != null)" | awk '{
-  bracket_open = index($0, "[")
-  dollar = index($0, "$")
+  bracket_open = index($0, "[") + 1
+  dollar = index($0, "$") - 2
   print(substr($0, bracket_open, dollar-1))}')
   objectiveValue=$((echo $json | jq -r ".output.default | select(. != null)") | 
   awk '{

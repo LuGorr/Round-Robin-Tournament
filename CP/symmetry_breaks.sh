@@ -32,9 +32,9 @@ elif [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNKNO
   optimal="false";
 else
   formatted_sol=$(echo $json | jq   '.output.default | select(. != null)' | awk '{
-  first_bracket = index($0, "$") + 1
+  first_bracket = index($0, "$") + 2
   tmp = substr($0, first_bracket)
-  last_bracket = length(tmp)-1
+  last_bracket = length(tmp) - 2
   print substr(tmp, 0, last_bracket)
   }');
   optimal="true";
