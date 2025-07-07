@@ -1,0 +1,65 @@
+FROM ubuntu:22.04
+
+# Imposta la versione di MiniZinc come un ARG (argomento di build)
+ARG MINIZINC_VERSION=2.9.2
+
+# Installa le dipendenze necessarie
+RUN apt-get update && \
+    apt-get install -y libgl1-mesa-dev \
+                       python3.11-dev \
+                       python3-pip \
+                       wget \
+                       bc \
+                       jq && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Non installare libabsl-dev, useremo le librerie del bundle MiniZincIDE
+
+# Scarica ed estrai il bundle MiniZincIDE
+RUN mkdir -p /cdmo_download && \
+    wget https://github.com/MiniZinc/MiniZincIDE/releases/download/${MINIZINC_VERSION}/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz -O /cdmo_download/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz && \
+    tar -xvf /cdmo_download/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz -C /cdmo_download/ && \
+    rm /cdmo_download/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz
+
+# Imposta il PATH per gli eseguibili di MiniZinc (permanente)
+ENV MINIZINC_BUNDLE_PATH="/cdmo_download/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64"
+ENV PATH="${PATH}:/cdmo_download/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64/bin"
+
+# Imposta LD_LIBRARY_PATH per le librerie di MiniZinc/OR-Tools (permanente)
+# Questo è il passaggio chiave per risolvere l'errore libabsl_flags_parse.so
+ENV LD_LIBRARY_PATH="${MINIZINC_BUNDLE_PATH}/lib"
+
+# Installa i pacchetti Python
+RUN python3.11 -m pip install --no-cache-dir \
+    minizinc \
+    "minizinc[dzn]" \
+    z3-solver \
+    z3 \
+    matplotlib \
+    gurobipy \
+    amplpy --upgrade
+
+# Installa i moduli AMPL (se necessario, assicurati che la chiave sia valida e non esposta pubblicamente)
+# Nota: "caf71c55-8ecf-4310-90e3-f0195364ecce" è una chiave API. Assicurati che non sia un problema di sicurezza esporla in un Dockerfile.
+RUN python3.11 -m amplpy.modules install highs cbc gurobi cplex && \
+    python3.11 -m amplpy.modules activate "caf71c55-8ecf-4310-90e3-f0195364ecce"
+
+# Crea le directory dell'applicazione e copia i file
+WORKDIR /app
+RUN mkdir -p /app/SMT /app/CP /app/MIP
+
+COPY ./SMT /app/SMT
+COPY ./CP /app/CP
+
+RUN chmod +x /app/SMT/run_smt.sh
+RUN chmod +x /app/CP/run_cp.sh
+
+# Imposta PYTHONUNBUFFERED (già presente)
+ENV PYTHONUNBUFFERED=1
+
+# Dichiarazione del VOLUME (già presente)
+VOLUME ["/res"]
+
+# Comando da eseguire all'avvio del container
+CMD ["/bin/bash", "-c", "/app/CP/run_cp.sh"]
