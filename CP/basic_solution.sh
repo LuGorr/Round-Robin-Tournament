@@ -22,7 +22,7 @@ json=$(minizinc --disable-warnings --statistics --json-stream --param-file $s --
 if [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNSATISFIABLE" ]; then
   formatted_sol="[]";
   optimal="true";
-  if [ "$(echo $s | grep "coinbc")" != "" ]; then
+  if [ "$(echo $s | grep "coinbc")" != "" -o "$(echo $s | grep "ortools")" != "" ]; then
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null" | head -n 1)
   else
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null")
@@ -34,9 +34,9 @@ elif [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNKNO
 else
   optimal="false"
   formatted_sol=$(echo $json | jq   '.output.default | select(. != null)');
-  formatted_sol="${formatted_sol#\"}";
-  formatted_sol="${formatted_sol%\"}";
-  if [ "$(echo $s | grep "coinbc")" != "" ]; then
+  formatted_sol="${formatted_sol#\"[}";
+  formatted_sol="${formatted_sol%]\"}";
+  if [ "$(echo $s | grep "coinbc")" != "" -o "$(echo $s | grep "ortools")" != "" ]; then
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null" | head -n 1)
   else
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null")

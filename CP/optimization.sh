@@ -35,6 +35,7 @@ elif [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNKNO
   optimal="false";
   objectiveValue='"None"'
 else
+  echo $json
   optimal="true"
   #formatted_sol=$(echo $json | jq   '.output.default | select(. != null)');
   #formatted_sol="${formatted_sol#\"}";
@@ -48,12 +49,12 @@ else
   fi
 
   formatted_sol=$(echo $json | jq -r ".output.default | select(. != null)" | awk '{
-  bracket_open = index($0, "[")
-  dollar = index($0, "$")
+  bracket_open = index($0, "[") + 1
+  dollar = index($0, "$") - 2
   print(substr($0, bracket_open, dollar-1))}')
   objectiveValue=$((echo $json | jq -r ".output.default | select(. != null)") | 
   awk '{
-  dollar = index($0, "$")
+  dollar = index($0, "$") 
 
   if(dollar == 0){
   next
@@ -66,6 +67,7 @@ else
 file_path="$directory/res/CP/"$n".json"
 solver="${s#solver-configs/}"
 solver="${solver%.mpc}"
+
 if [  -s $file_path ]; then 
 truncate -s -2 $file_path; 
 echo ",">> $file_path; else
@@ -78,4 +80,4 @@ echo '        "sol": '$formatted_sol>> $file_path
 echo '    }'>> $file_path
 echo '}'>> $file_path
 
-
+  
