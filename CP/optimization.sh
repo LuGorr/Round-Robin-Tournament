@@ -17,7 +17,7 @@ while getopts "n:s:" opt; do
   esac
 done
 #json=$(minizinc --statistics --json-stream --solver-time-limit 300000 --param-file $s $directory/CP/optimization.mzn -D "n=$n")
-json=$(minizinc --disable-warnings --statistics --json-stream --param-file $s --solver-time-limit 300000 $directory/CP/optimization.mzn -D "n=$n")
+json=$(minizinc --statistics --json-stream --param-file $s --solver-time-limit 300000 $directory/CP/optimization.mzn -D "n=$n")
 
 
 if [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNSATISFIABLE" ]; then
@@ -28,7 +28,7 @@ if [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNSATIS
   else
     solve=$(echo $json | jq -r ".statistics.solveTime"| grep -v "null")
   fi
-  objectiveValue="None"
+  objectiveValue='"None"'
 elif [ "$(echo "$json" | jq -r 'select(.type == "status") | .status')" == "UNKNOWN" ]; then
   formatted_sol="[]";
   solve="300";
