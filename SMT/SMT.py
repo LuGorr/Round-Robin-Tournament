@@ -40,8 +40,8 @@ def create_output(result, runtime, model, home, away, weeks, periods, timeout=30
         for p in range(periods):
             period_games = []
             for w in range(weeks):
-                home_team = model[home[w][p]].as_long()
-                away_team = model[away[w][p]].as_long()
+                home_team = model[home[w][p]].as_long() + 1
+                away_team = model[away[w][p]].as_long() + 1
                 period_games.append([home_team, away_team])
             schedule.append(period_games)
         
@@ -53,11 +53,17 @@ def create_output(result, runtime, model, home, away, weeks, periods, timeout=30
             output["time"] = 300
         else:
             output["time"] = math.floor(runtime)
-        output["optimal"] = False
+        if result == unsat:
+            output["optimal"] = True
+        else:
+            output["optimal"] = False
+
         output["obj"] = None
-        output["sol"] = None
+        output["sol"] = []
     
-    return output
+    return {
+                "z3": output
+    }
 
 def format_json_output(output):
     """
@@ -194,8 +200,10 @@ def solve_round_robin(n):
     return create_output(result, runtime, model, home, away, weeks, periods, timeout)
 
 
-parser = argparse.ArgumentParser("simple_example")
+parser = argparse.ArgumentParser("Prob026: Sports Scheduling")
 parser.add_argument("teams", help="An amount of teams to solve the problem for.", type=int)
 args = parser.parse_args()
 
-solve_round_robin(args.teams)
+result = solve_round_robin(args.teams)
+
+print(format_json_output(result))

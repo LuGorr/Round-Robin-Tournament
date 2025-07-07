@@ -12,18 +12,21 @@ RUN pip install z3-solver
 
 WORKDIR /app
 
-COPY SMT/SMT.py /SMT/SMT.py
-#COPY CP/CP.mzn /CP/CP.mzn
-#COPY MIP/* /MIP/*
+RUN mkdir -p /app/SMT /app/CP /app/MIP
 
-COPY SMT/run_smt.sh /SMT/run_smt.sh
-#COPY CP/run_cp.sh /CP/run_cp.sh
+COPY ./SMT/SMT_tactic.py /app/SMT
+COPY ./SMT/run_smt.sh /app/SMT
+#COPY ./CP/CP.mzn /app/CP/
+#COPY ./CP/run_cp.sh ./CP/run_cp.sh
+#COPY ./MIP/* /app/MIP/*
 
-RUN chmod +x /SMT/run_smt.sh /CP/run_cp.sh
+RUN chmod +x /app/SMT/run_smt.sh
+#/app/CP/CP.sh /app/MIP/MIP.sh
 
 VOLUME ["/res"]
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["/SMT/run_smt.sh"]
-#CMD ["/CP/run_cp.sh"]
+CMD ["/bin/bash", "/app/SMT/run_smt.sh"]
+#CMD ["./CP/run_cp.sh"]
+#ENTRYPOINT ["/bin/bash", "-c", "/app/SMT/SMT.sh && /app/CP/CP.sh && /app/MIP/MIP.sh"]
