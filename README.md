@@ -13,3 +13,9 @@ Then run
 docker run --mount src="${pwd}"/res,target=/app/res,type=bind cdmo_chagoko
 ```
 to start the Docker container with the mounted directories.
+
+## CP
+
+## SMT
+
+## MIP

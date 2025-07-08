@@ -146,48 +146,7 @@ def solve_round_robin(n):
                 away_app = away[w][p] == t
                 appearances.extend([home_app, away_app])
             s.add(PbLe([(app, 1) for app in appearances], 2))
-    
-    # SYMMETRY BREAKING CONSTRAINTS
-    
-    # 1. Fix team 0's first game
-    s.add(home[0][0] == 0)
-    s.add(away[0][0] == 1)
-    '''
-    # 2. Order periods in first week by home team
-    for p in range(periods - 1):
-        s.add(home[0][p] < home[0][p + 1])
-    
-    # 3. Team 0 period preference
-    for p in range(1, periods):
-        count_p0 = Sum([If(Or(home[w][0] == 0, away[w][0] == 0), 1, 0) for w in range(weeks)])
-        count_p = Sum([If(Or(home[w][p] == 0, away[w][p] == 0), 1, 0) for w in range(weeks)])
-        s.add(count_p0 >= count_p)
-    
-    # 4. Lexicographic ordering on weeks
-    for w in range(weeks - 1):
-        week_diff = []
-        for p in range(periods):
-            home_diff = home[w][p] - home[w + 1][p]
-            away_diff = away[w][p] - away[w + 1][p]
-            week_diff.extend([home_diff, away_diff])
-        
-        lex_constraints = []
-        for i in range(len(week_diff)):
-            prefix_equal = And([week_diff[j] == 0 for j in range(i)])
-            current_less = week_diff[i] < 0
-            lex_constraints.append(And(prefix_equal, current_less))
-        s.add(Or(lex_constraints + [And([d == 0 for d in week_diff])]))
-    '''
-    # 5. Team pair home/away preference
-    for w in range(weeks):
-        for p in range(periods):
-            game_with_12 = Or(
-                And(home[w][p] == 1, away[w][p] == 2),
-                And(home[w][p] == 2, away[w][p] == 1)
-            )
-            prefer_1_home = Implies(game_with_12, home[w][p] <= away[w][p])
-            s.add(prefer_1_home)
-    
+
     # Solve and measure time
     result = s.check()
     end_time = time.time()

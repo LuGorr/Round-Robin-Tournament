@@ -1,1 +1,5 @@
 CO/test.json
+/res/CP/*.json
+/res/SMT/*.json
+/res/MIP/*.json
+solution_checker.py

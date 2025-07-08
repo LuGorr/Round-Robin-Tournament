@@ -32,7 +32,7 @@ def create_output(result, runtime, model, home, away, weeks, periods, timeout=30
     if result == sat:
         # Solution found
         output["time"] = math.floor(runtime)
-        output["optimal"] = False
+        output["optimal"] = True
         output["obj"] = None
         
         # Extract solution in required format: periods × weeks
