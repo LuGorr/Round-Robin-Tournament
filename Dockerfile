@@ -4,7 +4,7 @@ RUN pip install z3-solver amplpy pandas
 
 ARG MINIZINC_VERSION=2.9.2
 
-RUN apt-get update && apt-get install -y wget unzip bc jq && \
+RUN apt-get update && apt-get install -y wget unzip bc jq libgl1-mesa-dev libfontconfig1 && \
     wget https://github.com/MiniZinc/MiniZincIDE/releases/download/${MINIZINC_VERSION}/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz && \
     tar -xzf MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64.tgz && \
     mv MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64 /opt/minizinc && \
@@ -14,6 +14,14 @@ RUN apt-get update && apt-get install -y wget unzip bc jq && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Imposta il PATH per gli eseguibili di MiniZinc (permanente)
+ENV MINIZINC_BUNDLE_PATH="/opt/minizinc"
+ENV PATH="${PATH}:/opt/minizinc/bin"
+
+# Imposta LD_LIBRARY_PATH per le librerie di MiniZinc/OR-Tools (permanente)
+# Questo è il passaggio chiave per risolvere l'errore libabsl_flags_parse.so
+ENV LD_LIBRARY_PATH="${MINIZINC_BUNDLE_PATH}/lib"
 
 RUN mkdir -p /app/SMT /app/CP /app/MIP
 

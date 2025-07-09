@@ -4,6 +4,7 @@ import math
 import time
 
 from z3 import *
+from pathlib import Path
 
 def create_output(result, runtime, model, home, away, weeks, periods, timeout=300):
     """
@@ -61,9 +62,7 @@ def create_output(result, runtime, model, home, away, weeks, periods, timeout=30
         output["obj"] = None
         output["sol"] = []
     
-    return {
-                "z3": output
-    }
+    return output
 
 def format_json_output(output):
     """
@@ -199,6 +198,39 @@ def solve_round_robin(n):
     # Create and return output
     return create_output(result, runtime, model, home, away, weeks, periods, timeout)
 
+def update_results_file(n, result, method_name="z3_constbreaking"):
+    """
+    Updates or creates the results file for a given n.
+    
+    Args:
+        n: Number of teams
+        result: Result dictionary from solve function
+        method_name: Name of the method (e.g., "z3_tactics", "z3_basic")
+    """
+    file_path = f"{Path.cwd()}/res/SMT/{n}.json"
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # Check if file exists and load existing data
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            # If file is corrupted or can't be read, start fresh
+            data = {}
+    else:
+        data = {}
+    
+    # Add new result
+    data[method_name] = result
+    
+    # Write back to file
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    
+    print(f"Results updated in {file_path}")
 
 parser = argparse.ArgumentParser("Prob026: Sports Scheduling")
 parser.add_argument("teams", help="An amount of teams to solve the problem for.", type=int)
@@ -206,4 +238,5 @@ args = parser.parse_args()
 
 result = solve_round_robin(args.teams)
 
+update_results_file(args.teams, result)
 print(format_json_output(result))

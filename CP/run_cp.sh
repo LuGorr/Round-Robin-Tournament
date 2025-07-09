@@ -2,6 +2,8 @@
 
 directory=$(pwd)/CP
 
+echo 'Starting running all CP models'
+
 instance_dims=(4 6 8 10 12 14)
 solvers=("gecode" "chuffed" "coinbc" "ortools")
 for n in "${instance_dims[@]}"; do
@@ -16,3 +18,5 @@ for n in "${instance_dims[@]}"; do
         echo "$("$directory"/optimization.sh -n $n -s "$directory/solver-configs/1-solve-$solver.mpc" | grep -v "WARNING:")"
     done
 done
+
+echo 'Finished running all CP models'

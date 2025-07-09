@@ -35,7 +35,7 @@ List of all models:
 
 To run Docker container with the exact model and number of teams:
 ```sh
-docker run --mount src="${pwd}"/res,target=/app/res,type=bind cdmo_chagoko python SMT/<your_model>.py <your_n> > res/SMT/<your_n>.json
+docker run --mount src="${pwd}"/res,target=/app/res,type=bind cdmo_chagoko python SMT/<your_model>.py <your_n>
 ```
 
 ## MIP
