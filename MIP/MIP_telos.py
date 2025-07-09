@@ -69,8 +69,6 @@ def extract_solution(ampl, n_teams, solve_time,solve_result):
     else:
         return{'matches_df': pd.DataFrame({'A' : []}),'solve_time':solve_time,'n_teams':n_teams,'obj':0}
 
-    
-
 def reformat_solution(result_dict, model_name , solver):
 
     matches_df = result_dict['matches_df']
@@ -86,7 +84,6 @@ def reformat_solution(result_dict, model_name , solver):
     
     if obj!=n_teams:
         obj = 'None'
-    
     
     # Convert matches_df to the required matrix format
     n_periods = n_teams // 2
@@ -117,7 +114,6 @@ def reformat_solution(result_dict, model_name , solver):
             'optimal': optimal,
             'obj': obj,
             'sol': sol}}
-
 
 def get_models(n_teams,solver):
     return {'dec_final_model':f"""
@@ -804,8 +800,6 @@ def get_models(n_teams,solver):
         sum{{i in TEAMS, j in TEAMS: i != j}} x[i,j,m] = 1;    
     """
         }
-                
-
 
 if __name__ == "__main__":
     for n in [4,6,8,10,12,14]: 
@@ -833,11 +827,5 @@ if __name__ == "__main__":
                     file.write("}")
                 ampl.reset()
 
-            
-
-
 # Using solution properties within an enumerative search to solve a
 #  sports league scheduling problem
-
-    
-        

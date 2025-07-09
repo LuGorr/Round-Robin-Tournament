@@ -1,19 +1,14 @@
-
 import pandas as pd
-import numpy as np
 from amplpy import AMPL, Environment,ampl_notebook, DataFrame
 import time
 import os
 import math
 import json
+from pathlib import Path
+
 ampl = ampl_notebook(modules=["highs", "cbc", "gurobi", "cplex"], license_uuid="caf71c55-8ecf-4310-90e3-f0195364ecce")
 
-
 import argparse
-
-
-
-
 
 def solve_tournament(ampl, n_teams, solver='gurobi', time_limit=300):
     ampl.option['solver'] = solver
@@ -91,7 +86,6 @@ def reformat_solution(result_dict, model_name , solver):
     optimal = result_dict['optimal']
     time = math.floor(solve_time)
     
-    
     if obj!=n_teams:
         obj = 'None'
     
@@ -125,12 +119,6 @@ def reformat_solution(result_dict, model_name , solver):
             'optimal': optimal,
             'obj': obj,
             'sol': sol}}
-
-
-
-
-
-
 
 def get_models(n_teams,solver):
     return {'dec_final_model':f"""
@@ -824,8 +812,6 @@ def get_models(n_teams,solver):
     """
         }
 
-
-
 # if __name__ == "__main__":
 #     for n in [4, 6, 8, 10, 12, 14]: 
 #         for solver in ["cplex", "gurobi", "highs", "cbc"]:
@@ -852,17 +838,12 @@ def get_models(n_teams,solver):
 
 #                 ampl.reset()
 
-
-
-
-
-
 def run_and_save(ampl, n, solver, model_name, model_code):
     ampl.eval(model_code)
     solution = solve_tournament(ampl, n, solver, time_limit=300)
     reformatted = reformat_solution(solution, model_name, solver)
 
-    path = f"../../res/MIP/{n}.json"
+    path = f"{Path.cwd()}/res/MIP/{n}.json"
     if os.path.exists(path):
         with open(path, "r") as f:
             results = json.load(f)
@@ -910,4 +891,3 @@ if __name__ == "__main__":
         run_single(ampl, args.n, args.solver, args.model)
     else:
         print("Please specify --all or -n with --model (and optionally --solver)")
-
