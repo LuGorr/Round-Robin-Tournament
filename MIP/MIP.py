@@ -427,60 +427,6 @@ def get_models(n_teams,solver):
     subject to symmetry_between_12:
         forall{{m in MATCHES}} x[2,1,m] <= x[1,2,m];   
     """,
-    'opt_withoutDef_withAscWeek1': f"""
-    param n := {n_teams};  # Number of teams (must be even)
-    param weeks := n - 1;
-    param periods := n div 2;
-    param total_matches := n * (n - 1) div 2;
-    set TEAMS := 1..n;
-    set WEEKS := 1..weeks;
-    set PERIODS := 1..periods;
-    set MATCHES := 1..total_matches;
-    param match_to_week{{m in MATCHES}} := ((m-1) mod weeks)+1;
-    param match_to_period{{m in MATCHES}} := ((m-1) div weeks) + 1;
-    param WEIGHT{{p in PERIODS}} := (card(PERIODS) + 1 - p) * n;
-    var x{{i in TEAMS, j in TEAMS, m in MATCHES: i != j}} binary;
-    var y{{TEAMS, WEEKS, PERIODS}} binary;
-    var h{{TEAMS,PERIODS,WEEKS}} binary;
-    var a{{TEAMS,PERIODS, WEEKS}} binary;
-    var h1{{TEAMS, PERIODS}} binary;
-    var obj_funky integer >= n;  
-    subject to gamimeno:
-        obj_funky = sum{{i in TEAMS}}abs(sum{{j in TEAMS, m in MATCHES: i!=j}}x[i,j,m]- sum{{j in TEAMS,m in MATCHES:i!=j}}x[j,i,m]);
-    minimize objective_funky: obj_funky;
-    let {{i in TEAMS, j in TEAMS , m in MATCHES: i!=j}}x[i,j,m]:=0;
-    subject to unique_pairings{{i in TEAMS, j in TEAMS: i != j}}:
-        sum{{m in MATCHES}} (x[i,j,m] + x[j,i,m]) = 1;
-    subject to match_structure{{m in MATCHES}}:
-        sum{{i in TEAMS, j in TEAMS: i != j}} x[i,j,m] = 1;
-    subject to link_x_y_home{{i in TEAMS, j in TEAMS, m in MATCHES: i != j}}:
-        x[i,j,m] <= y[i, match_to_week[m], match_to_period[m]];
-    subject to link_x_h{{i in TEAMS, j in TEAMS, m in MATCHES: i !=j}}:   
-        x[i,j,m] <= h[i,match_to_period[m], match_to_week[m]];
-    subject to link_x_y_away{{i in TEAMS, j in TEAMS, m in MATCHES: i != j}}:
-        x[i,j,m] <= y[j,match_to_week[m],match_to_period[m]];
-    subject to weekly_play{{i in TEAMS, w in WEEKS}}:
-        sum{{p in PERIODS}} y[i,w,p] = 1;
-    subject to link_x_a{{i in TEAMS, j in TEAMS, m in MATCHES: i !=j}}:
-        x[i,j,m]<= a[j,match_to_period[m], match_to_week[m]];
-    subject to period_capacity{{w in WEEKS, p in PERIODS}}:
-        sum{{i in TEAMS}} y[i,w,p] = 2;
-    subject to period_limits{{i in TEAMS, p in PERIODS}}:
-        sum{{w in WEEKS}} y[i,w,p] <= 2;
-    subject to fix_first_match:
-        x[2,3,1] = 1;
-    subject to lex_home_across_weeks{{w in 1..(weeks-1)}}:
-       sum{{p in PERIODS, i in TEAMS}} WEIGHT[p] * i * h[i,p,w] <= sum{{p in PERIODS, j in TEAMS}} WEIGHT[p] * j * h[j,p,w+1];
-    subject to lex_away_across_weeks{{w in 1..(weeks-1)}}:
-       sum{{p in PERIODS, i in TEAMS}} WEIGHT[p] * i * a[i,p,w] <= sum{{p in PERIODS, j in TEAMS}} WEIGHT[p] * j * a[j,p,w+1];
-    subject to symmetry_between_12:
-        forall{{m in MATCHES}} x[2,1,m] <= x[1,2,m]; 
-    subject to link_home_vars{{i in TEAMS, p in PERIODS}}:
-        h1[i,p] = sum{{j in TEAMS, m in MATCHES: j != i and match_to_week[m] = 1 and match_to_period[m] = p}} x[i,j,m];
-    subject to one_home_per_period{{p in PERIODS}}:
-        sum{{i in TEAMS}} h1[i,p] = 1;
-    subject to home_team_ordering{{p in 1..(periods-1)}}:
-        sum{{i in 1..n}} i * h1[i,p] <= sum{{i in 1..n}} i * h1[i,p+1]; """,
     'opt_withDef_withoutAscWeek1': f"""
     param n := {n_teams};  # Number of teams (must be even)
     param weeks := n - 1;
