@@ -69,3 +69,6 @@ To run Docker container with the exact solver, model and number of teams:
 ```sh
 docker run --mount src="${pwd}"/res,target=/app/res,type=bind cdmo_chagoko python MIP/MIP.py -n=<your_n> --model=<your_model> --solver=<your_solver>
 ```
+
+Overleaf:
+https://www.overleaf.com/1157611544qpkdbptwmvwn#d0f6c6
