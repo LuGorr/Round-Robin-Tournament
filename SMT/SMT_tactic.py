@@ -233,17 +233,23 @@ def solve_round_robin_with_tactics(n):
     
     # Apply tactic to goal
     result = tactic(g)
+
+    # For SolverFor see
+    # https://z3prover.github.io/papers/programmingz3.html
+    # https://smt-lib.org/logics.shtml
     
     # Extract solver from result
     if len(result) == 1:
-        s = Solver()
+        #s = Solver()
+        s = SolverFor('AUFLIA')
         s.add(result[0])
     else:
         # Multiple subgoals - use parallel solving
-        s = Solver()
+        #s = Solver()
+        s = SolverFor('AUFLIA')
         for subgoal in result:
             s.add(subgoal)
-    
+
     # Solve with timeout
     s.set("timeout", timeout)
     check_result = s.check()
