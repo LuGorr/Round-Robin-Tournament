@@ -1,0 +1,630 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{mathptmx}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{color}
+\usepackage{multirow}
+\usepackage{url}
+%\title{Project Work Combinatorial Decision Making & Optimization }
+
+\title{\textbf{Modeling \& solving the Sports Tournament Scheduling (STS) problem}}
+\author{Dimitra Chatzistefanou dimit.chatzistefanou@studio.unibo.it,\\  Ludovico Gorrieri ludovico.gorrieri@studio.unibo.it, \\ Grigorii Kolosov  grigorii.kolosov@studio.unibo.it}
+
+%\author{Dimitra Chatzistefanou, Ludovico Gorrieri, Grigorii Kolosov  \\ dimit.chatzistefanou@studio.unibo.it, ludovico.gorrieri@studio.unibo.it, grigorii.kolosov@studio.unibo.it}
+\date{}
+
+\begin{document}
+\maketitle
+\section{Introduction}
+% \textit{"You do not need to introduce the problem, nor the optimization methods that
+% you are using to tackle the problem. After a proper introduction to your report,
+% describe and formalize what is common to all the models (such as input parameters, the objective variable and its bounds, pre-processing steps, . . . ). Refer to
+% this section where necessary instead of copying and pasting text in the following
+% sections"}
+This report aims to navigate the reader through our experimental work on modeling and solving the STS problem. It will be shown that, despite our expectation for symmetry-breaking constraints to improve the models, on the contrary, on most occasions they slow them down. \\
+List of common symmetry-breaking constraints among different approaches:
+\begin{itemize}
+    \item[(sb1)] The first half of the teams is constrained to appear exactly once during the period matching their index, subject to the property I, to cut permutations over the Deficient sets.\\
+    \textit{Property I. "In each period, two teams (a 2-set D), called “Deficient”, appear exactly once and the other teams are present exactly twice. Furthermore, if one considers two different periods p and p', then the deficient teams of period p appear twice in period p".\cite{hamiez2008using} \cite{artictle}}
+
+    \item [(sb2)]First week's home teams to be in ascending order (and 1st weeks away teams in descending for cp) 
+    \item [(sb3)]Fixing the first match to break value symmetries.
+    \item [(sb4)]Lexicographic ordering constraint. The teams playing home (or away, respectively) of a week w when viewed as a sequence to be lexicographically less than or equal to the w+1 week's sequence of home(or away) teams. In different models variations of this constraint have been used with the home teams lexicographically ascending and away teams descending (cp, mip's model dec\_lexAwayDiscending) or for the lexicographic order, ascending in both occasions, to be implement only to the first $n/2$ weeks of the tournament (as a compromise for time efficiency), (mip's dec\_final\_model).
+    \item [(sb5)] Favoring team 1 (or team 2 for smt) to play home when competing with team 2 (3 for smt), to avoid further permutations.
+\end{itemize}
+
+\section{CP}
+
+\subsection{Decision variables}
+All the models use a $\textbf{ weeks }\times\textbf{ periods }$ matrix representation with range \textbf{1..n} for representing the schedule, either using two of them for the \textbf{home} and \textbf{away} distinction or with the addition of a 3\textsuperscript{d} dimension.\\
+ \textbf{symmetry\_breaks.mzn}, \textbf{warm\_start.mzn} and \textbf{optimization.mzn} also rely on and additional \textbf{match\_pair} matrix (same dimensionality), linked with the main representation, where each element (\textbf{1..((n*(n-1)) div 2}) represents the unique match between two teams.\\
+A warm start matrix is also used in \textbf{warm\_start.mzn}.  
+
+\subsection{Constraints}
+Extra notations:
+\begin{itemize}
+    \item \textbf{count}(x, elem) returns the number of occurrences of elem inside x (array).
+    \item the bool $\implies$ int conversion is left implied.
+    \item \textbf{"\_"} in the context of array indexing implies the expansion on the indexed dimesion over all the elements.
+    \item every constraint is indexed with a number corresponding to the commented index in the model.
+\end{itemize}
+The \textbf{basic constraints} are:
+\begin{itemize}
+
+    \item Each team plays exactly one time per week (\textbf{1}).\\
+    $\forall \textbf{t} \in teams, \textbf{w} \in weeks\\
+    \textbf{count}([home[ \textbf{w}, \_ ], \ away[ \textbf{w}, \_ ]],\ \textbf{t})=1$.
+    
+    \item Each team plays exactly one time against every other team (no self play).
+    \begin{itemize}
+        \item in \textbf{basic\_solution.mzn} the constraint is implemented as follows (\textbf{2}):\\
+        $\forall\ \textbf{t1}, \textbf{t2}\ \in\ teams\ s.t.\ \textbf{t1} \neq \textbf{t2}\\
+        \sum_{\textbf{w}=1}^{\textbf{weeks}}\sum_{\textbf{p}=1}^{\textbf{periods}}((home[ \textbf{w}, \textbf{p} ]=\textbf{t1} \land away[ \textbf{w}, \textbf{p} ]=\textbf{t2}) \lor (home[ \textbf{w}, \textbf{p} ]=\textbf{t2} \land away[ \textbf{w}, \textbf{p} ]=\textbf{t1})) = 1$.
+        
+        \item all the other models use the \textbf{alldifferent} formulation on the match\_pair matrix (\textbf{3}):
+        \\$\forall\ \textbf{w1}, \textbf{w2}\ \in\ weeks,\ \textbf{p1}, \textbf{p2}\ \in\ periods\ s.t.\ \textbf{(w1,p1)} \neq \textbf{(w2,p2)}\\
+        match\_pair[ \textbf{w1}, \textbf{p1} ] \neq match\_pair[ \textbf{w2}, \textbf{p2} ]$.
+    \end{itemize}
+
+    \item Each team plays at most 2 times in a given period over the whole tournament (\textbf{4}).\\
+    $\forall\ \textbf{t}\ \in\ teams,\ \textbf{p}\ \in\ periods\\
+    \sum_{\textbf{w}=1}^{\textbf{weeks}}((home[\textbf{w}, \textbf{p}] = \textbf{t})\lor (away[\textbf{w}, \textbf{p}] = \textbf{t})) \leq 2$
+\end{itemize}
+The symmetry breaking constraints are:
+\begin{itemize}
+    \item(sb 1)   
+    $\forall\ \textbf{p}\ \in\ periods\\
+    \sum_{\textbf{w}=1}^{2..weeks}((home[ \textbf{w}, \textbf{p}] = \textbf{p}) \lor ((away[ \textbf{w}, \textbf{p}] = \textbf{p})) \ $ \ \  (\textbf{5})
+    \item(sb 2) $\forall\ \textbf{p}\ \in\ 1..(periods+1)\\
+    (home[1,\textbf{p}] < home[1,\textbf{p}-1])\land(away[1,\textbf{p}] > away[1,\textbf{p}+1]) (\textbf{6}).\\
+    $
+    \item (sb3) In some models only the home team is imposed to avoid interferences with other constraints (\textbf{7}).
+
+    \item (sb4)The choice regarding the use of two different orderings is derived from the constraints 6. Implementation via built in Minizinc function (\textbf{8}).
+
+    \item team 1 is imposed to be appearing only once over the second period in accordance to constraint 5 (\textbf{9}).\\
+    $\sum_{\textbf{w}=1}^{weeks}(home[\textbf{w}, 2] \lor away[\textbf{w}, 2]) = 1$
+\end{itemize}
+In addition to the aforementioned constraints some channeling constraints are used, mainly for output necessities.
+The only relevant one is the link between home, away and match\_pair.
+For this constraint the predefined matches upper triangular matrix, representing the match between team i and j is needed:
+\begin{itemize}
+    \item matches (\textbf{10}):\\$\forall\ \textbf{i},\textbf{j}\ \in\ teams\\
+    (\textbf{i}\leq \textbf{j}\ \implies\ matches[\textbf{i}, \textbf{j}]=0) \land ((\textbf{j}=2 \land \textbf{i} = 1)\ \implies\ matches[\textbf{i},\textbf{j}]=1) \land ((\textbf{j}>\textbf{i} \land \textbf{j} > 1)\ \implies\ matches[\textbf{i},\textbf{j}]>matches[\textbf{i},\textbf{j}-1])
+  \land ((\textbf{i}>1 \land \textbf{j}=\textbf{i}+1)\ \implies\ matches[\textbf{i}, \textbf{j} ]>matches[\textbf{i}-1, \textbf{n}])$
+  \item channelling constraint (\textbf{11}):\\
+  $\forall\ \textbf{w}\ \in\ weeks, \textbf{p}\ \in\ periods\ s.t.\\
+  \textbf{j}=max(home[\textbf{w},\textbf{p}], away[\textbf{w},\textbf{p}],\\\textbf{i}=min(home[\textbf{w},\textbf{p}], away[\textbf{w},\textbf{p}]\\
+  match\_pair[\textbf{w}, \textbf{p}]=matches[\textbf{i}, \textbf{j}]$
+\end{itemize}
+
+% \subsubsection{Search strategies and constraint annotations}
+% In order to examine the search space efficiently \textbf{int\_search} was used, the parameters are:
+% \begin{itemize}
+%     \item \textbf{first\_fail} chooses the variable with the smallest
+%     domain (useful if combined with many domain propagations).
+%     \item \textbf{indomain\_split} bisects the domain, excluding the upper half first (chosen in order to effectively combine with the ordering base symmetry breaking constraints).
+%     \item \textbf{complete} performs a complete search. This constraint was inserted due to empirical observations, the solvers were generally performing better with it's addition.
+% \end{itemize}
+% \textbf{restart\_luby}(100) was used to better explore the search space and
+% in \textbf{warm\_start.mzn} the annotation warm\_start was used in order to use a previously generated relaxed solution (\textbf{warm\_start.sh} contains the logic handling this process in addition to the use of a boolean parameter and if-then-elses inside the model) without the period appearance limit as a starting point for the search.
+\subsection{Objective function}
+The objective value used for the optimization version is:\\
+$\sum_{\textbf{i}}^{\textbf{n}}|\textbf{count}(home,\textbf{i})-\textbf{count}(away,\textbf{i})|$
+this function was chosen due to the existence of a precise lower bound (\textbf{n}) which is expressed in constraint (\textbf{12}).
+
+\subsection{Validation}
+
+\subsubsection{Experimental design}
+For the CP section of this project, 4 models were implemented and tested using 4 solvers.\\
+The models are as follows:
+\begin{itemize}
+    \item \textbf{basic\_solution.mzn} - contains only the basic constraints and a basic symmetry break.
+    \item \textbf{symmetry\_breaks.mzn} - includes various symmetry breaks.
+    \item \textbf{warm\_start.mzn} - adds warm starting on top of the previously cited constraints.
+    \item \textbf{optimization.mzn} - optimization version.
+\end{itemize}
+
+\subsubsection{Search strategies and constraint annotations}
+In order to examine the search space efficiently \textbf{int\_search} was used, the parameters are:
+\begin{itemize}
+    \item \textbf{first\_fail} chooses the variable with the smallest
+    domain (useful if combined with many domain propagations).
+    \item \textbf{indomain\_split} bisects the domain, excluding the upper half first (chosen in order to effectively combine with the ordering base symmetry breaking constraints).
+    \item \textbf{complete} performs a complete search. This constraint was inserted due to empirical observations, the solvers were generally performing better with it's addition.
+\end{itemize}
+\textbf{restart\_luby}(100) was used to better explore the search space and
+in \textbf{warm\_start.mzn} the annotation warm\_start was used in order to use a previously generated relaxed solution (\textbf{warm\_start.sh} contains the logic handling this process in addition to the use of a boolean parameter and if-then-elses inside the model) without the period appearance limit as a starting point for the search.
+
+\subsubsection{Experimental results}
+
+\begin{table}[H]
+\centering
+{\small
+\begin{tabular}{ |p{0.35cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}||p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|}
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{basic\_solution}& \multicolumn{4}{|c|}{symmetry\_breaks}\\
+ \cline{2-9}
+  &  gecode& chuffed & coinbc & ortools & gecode& chuffed & coinbc & ortools \\
+ \hline
+ 4&  UNSAT& UNSAT& UNSAT&   UNSAT&  UNSAT& UNSAT& UNSAT&    UNSAT\\
+ 6&   0& 0&  0&  0&  0& 0& 77&        0\\
+ 8&   58&  0& 80&   0&  -& 0& -&      1\\
+ 10&  -& 1&  -&   4&  -& 5& -&   -\\
+ 12&  -&  -&  -& -&  -& -& -&      -\\
+ 14&  -&  -& -&  -&  -& -& -&    -\\
+
+ %\hline
+\end{tabular}}
+
+\end{table}
+
+\begin{table}[H]
+\centering
+{\small
+\begin{tabular}{ |p{0.35cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}||p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|}
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{warm\_start}& \multicolumn{4}{|c|}{optimization}\\
+ \cline{2-9}
+  &  gecode& chuffed & coinbc & ortools & gecode& chuffed & coinbc & ortools \\
+ \hline
+ 4&  UNSAT& UNSAT& UNSAT&   UNSAT&  UNSAT& UNSAT& UNSAT&    UNSAT\\
+ 6&   0& 0&  -&  -&  0& 0& -&        0\\
+ 8&   52&  0& -&   -&  33& 0& -&   13\\
+ 10&  -& -&  -&   -&  -& 5& -&   24\\
+ 12&  -&  -&  -& -&  -& -& -&   - \\
+ 14&  -&  -& -&  -&  -& -& -&    -\\
+
+ %\hline
+\end{tabular}}
+
+\caption{CP models runtime with different solvers }
+\label{table:1}
+\end{table}
+
+% \begin{table}[h!]
+% \centering 
+% %put | between the p{measure} to get vertical lines
+% \begin{tabular}{ p{0.35cm} | p{1.19cm} p{1.19cm} p{1.19cm} p{1.19cm} p{1.19cm} p{1.19cm} p{1.19cm} p{1.19cm} }
+ 
+% %hline to get horizontal line
+%  %\hline
+%   n & gecode \newline basic\_sol
+%   & gecode \newline sym\_breaks
+%   &gecode \newline  warm\_start
+%   & gecode \newline opt 
+%   & chuffed \newline basic\_sol
+%   & chuffed \newline sym\_breaks 
+%   &chuffed \newline warm\_start 
+%   & chuffed \newline opt \\
+%  \hline
+%  4&  & & &   &  & & &    \\
+%  6&   & &  &  &  & & &        \\
+%  8&   &  & &   &  & & &      \\
+%  10&  & &  &   &  & & &   \\
+%  12&  &  &  & &  & & &      \\
+%  14&  &  & &  &  & & &    \\
+
+
+
+%  % n &gecode-basic_solution& gecode -symmetry_breaks&gecode-warm_start& gecode-optimization\\
+% %solvers: gecode& chuffed&coinbc&ortools
+ 
+%  %\hline
+% \end{tabular}
+% \caption{CP blabla }
+% \label{table:1}
+% \end{table}
+
+
+
+% %%%%%%%%%%%% option 2 %%%%%%%%%%%%%%%%%
+
+
+% \begin{table}[h!]
+% \centering
+% \begin{tabular}{ p{0.35cm} | p{1.22cm} p{1.22cm} p{1.22cm} p{1.22cm} p{1.22cm} p{1.22cm} p{1.22cm} p{1.22cm}  }
+%  \hline
+%  \multirow{2}{*}{n} & \multicolumn{4}{|c|}{geocode}& \multicolumn{4}{|c|}{chuffed}\\
+%  \cline{2-9}
+%      &  basic\_sol
+%   &   sym\_breaks
+%   &   warm\_start
+%   &  opt
+%   &  basic\_sol
+%   &   sym\_breaks 
+%   & warm\_start 
+%   &  opt \\
+%  \hline
+%  4&  & & &   &  & & &    \\
+%  6&   & &  &  &  & & &        \\
+%  8&   &  & &   &  & & &      \\
+%  10&  & &  &   &  & & &   \\
+%  12&  &  &  & &  & & &      \\
+%  14&  &  & &  &  & & &    \\
+
+% % \hline
+% \end{tabular}
+
+% \caption{CP blabla }
+% \label{table:1}
+% \end{table}
+
+
+
+% %%%%%%%%%%%% option 3 %%%%%%%%%%%%%%%%%
+
+
+% \begin{table}[h!]
+% \centering
+% \begin{tabular}{ p{0.35cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}|p{1.21cm}  }
+%  %\hline
+%  \multirow{2}{*}{n} & \multicolumn{4}{|c|}{models name}& \multicolumn{4}{|c}{modelsname}\\
+%  \cline{2-9}
+%   &  gecode& chuffed & coinbc & ortools & gecode& chuffed & coinbc & ortools \\
+%  \hline
+%  4&  & & &   &  & & &    \\
+%  6&   & &  &  &  & & &        \\
+%  8&   &  & &   &  & & &      \\
+%  10&  & &  &   &  & & &   \\
+%  12&  &  &  & &  & & &      \\
+%  14&  &  & &  &  & & &    \\
+
+%  %\hline
+% \end{tabular}
+
+% \caption{CP blabla }
+% \label{table:1}
+% \end{table}
+
+
+
+%  % n &gecode-basic_solution& gecode -symmetry_breaks&gecode-warm_start& gecode-optimization\\
+% %solvers: gecode& chuffed&coinbc&ortools
+
+\section{SMT}
+
+\subsection{Decision variables}
+Let $T ={0,1,..,n-1}$ be the set of all teams, $P={0,1,..,n/2-1}$ the set of all periods and $W=\{0,1,...,n-2\}$ the set of all weeks//
+ We use the variables $home[w][p]$ and $away[w][p]$, where $w \in W, p \in P$ represent team assignments, hence their domain is the set T. 
+
+\subsection{Objective function}
+The objective function minimizes the difference between the total amount of home appearances and total amount of away appearances for each team. It is defined using channeling constraints and bounded $>=1$ since for an optimal solution each team should play exactly once more or less in home (and away respectively). 
+$$ \forall t \in T \text{ we set the constraint }diff >= Abs(total\_home - total\_away))\  \mathbf{(*)}$$ 
+and then minimize the quantity $diff$ bounded by $diff>=1$.
+
+\subsection{Constraints}
+
+Main problem constraints
+\begin{itemize}
+    \item [\textbf{1.}] Each pair of teams should play exactly once:\\
+$\forall t_1,t_2 \in T, t_2>t_1$ let  $games_{t_1,t_2}$ be the set containing all the matches $t_1 \ vs \ t_2$ or $t_2 \ vs\  t_1$ over all the weeks and periods. Using the built-in function PbEq we make sure that the set contains always a single element.
+
+\item [\textbf{2.}] Each team plays exactly once per week, translates into:\
+Let $teams\_in\_week$ be the set of all teams playing either home or away in a specific week. We make use of the built in function Distinct over the teams\_in\_week for every week, making sure that there wont appear any duplicates in any of the teams\_in\_week.
+
+\item [\textbf{3.}] Each team plays at most twice in the same period across all weeks:\\ 
+As in constraint \textbf{1.} using the built-in function PbEq we ensure that for every team the set of appearances in a period contains exactly two elements.
+
+\end{itemize}
+Implied, Domain and channeling constraints :
+\begin{itemize}
+    \item[\textbf{4.}]No self play: $\forall w \in W\setminus\{n-2\}, p \in P\setminus\{n/2-1\} home[w][p] \neq away[w][p]$\\
+    \item[\textbf{5.}] $\forall w \in W\setminus\{n-2\}, p \in P\setminus\{n/2-1\} home[w][p] \in T$\\
+    $\forall w \in W\setminus\{n-2\}, p \in P\setminus\{n/2-1\} away[w][p] \in T$\\
+
+\item[\textbf{6.}]Each period accommodates exactly 2 teams (one match):\\
+$ \forall w \in W ,p \in P : \ \sum_{i \in T}(y[i,w,p])=2   $
+\item[\textbf{7.}]Definition of  objective function diff $\mathbf{(*)}$ 
+
+\end{itemize}
+Symmetry breaking constraints:
+\begin{itemize}
+\item [\textbf{(sb2)}] $\forall p \in P\setminus{n/2-1}  \ home[0][p]< home[0][p+1] $
+    \item [\textbf{(sb3)}]Fixing the first match for 1vs2 $home[0][0]=0$, $away[0][0]=1$
+
+    \item [\textbf{(sb5)}] After defining $\forall w \in W, p \in P$ the boolean parameter $game\_with\_12$ to be true when the game in $w ,p$ is  between teams 2,3 (1,2 in Z3 since the annotation begins from 0) we use the built in Implies to create the constraint: 
+    $\forall w in W, p \in P \  game\_with\_12 \implies home[w][p]<=away[w][p] $
+
+\end{itemize}
+
+\subsection{Validation}
+\subsubsection{Experimental design}
+For the SMT approach five models using different techniques were made:
+\begin{itemize}
+    \item Trivial model, containing only domain constraints;
+    \item Symmetry breaking model, containing both the domain and symmetry breaking constraints (\textbf{sb2}, \textbf{sb3}, \textbf{sb5});
+    \item Tactics model, containing all the constraints from the previous model and also using predefined tactics provided by the z3 solver;
+    \item Logics model, containing all the constraints and tactics from the previous model, and also limiting the possible sublogics used by z3 solver.
+    \item Optimization model, containing all the constraints from the symmetry breaking model and also a channeling constraint for lower bounding the objective function.
+\end{itemize}
+
+Some of the formulated symmetry breaking constraints (including those working in CP and MIP, like lexicographical ordering) were not found to improve the runtime of the solver or even caused it to spend more time on finding the solution. Therefore, it was decided not to include them in the final models.
+
+Different tactics were tried, but the ones which were found to have any effect on the runtime are 'simplify', 'propagate-values', 'card2bv' and 'pb-preprocess'.
+
+Limiting z3 solver to different sublogics was tried, to varying effect, but the biggest positive effect on runtime was caused by choosing AUFLIA, which stands for "Closed formulas over the theory of linear integer arithmetic and arrays extended with free sort and function symbols but restricted to arrays with integer indices and values".
+
+The general script that is run by default in the Docker container checks the problem for n={4,6,8,10,12} with every model, which in the worst case scenario can run for 100 minutes, but on average finishes within 40-50 minutes.
+
+\subsubsection{Experimental results}
+\textit{UNS}: for proved UNSAT, infeasibility of the problem \\
+\textit{-  :} for no solution on time \\
+\textit{int i $\in (0,300)$}: for the time required to solve the instance by the solver
+\begin{table}[H]
+\centering
+{\small
+\begin{tabular}{ |p{0.4cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}| }
+ \hline
+ \textbf{n} & \textbf{trivial} & \textbf{constraints} & \textbf{tactics} & \textbf{logics} & \textbf{optimal} \\
+ \hline
+ 4  & UNS & UNS & UNS & UNS & UNS \\
+ 6  & 3 & 2 & 0 & 0 & 0 \\
+ 8  & 24 & 21 & 1 & 1 & 27 \\
+ 10 & - & - & 92 & 40 & - \\
+ 12 & - & - & - & 227 & - \\
+ \hline
+\end{tabular}}
+
+\caption{SMT models runtime with different modeling approaches}
+\label{table:smt_models}
+\end{table}
+
+
+
+\section{MIP Model}
+
+\subsection{Decision variables}
+Let $\mathbf{T}=\{1,2,...,n\} , \text{ be the set of all teams } \mathbf{P}=\{1,2,...,n/2\} \text{ the set of all periods, } $\\
+$\mathbf{W}=\{1,2,...,n-1\}  \text{ the set of all weeks, }$\\ 
+$\mathbf{M}=\{1,2,...,\frac{n*(n-1)}{2}\} \text{ the set of all matches, corresponding to the enumeration of an } (n/2)\times(n-1)\text{matrix}$
+\begin{itemize}
+    \item[] $ x[i,j,m] = \left\{
+	\begin{array}{ll}
+		 \scriptstyle 1 & \scriptstyle \text{if team $i$ plays home vs $j$ at match $m$} \\
+         \scriptstyle 0 & \scriptstyle \text{else} 
+	\end{array}
+\right. \forall i,j \in T, \text{ s.t. } i\neq j, m \in M, $\\
+\end{itemize}
+auxiliary \textbf{binary} variables; assisting in the implementation of each constraint:
+\begin{enumerate}
+    \item [i.] $y[t,w,p]= 1  \text{ if team $t$ plays in period p in week $w$}$
+ \item[ii.]    $h[t,w,p]= 
+		 1  \text{ if team $t$ plays home in period $p$ in week $w$}$
+\item[iii.] $a[t,w,p]=
+		 1  \text{ if team $t$ plays away in period $p$ in week $w$} $
+\item[iv.] $h_1[t,w,p]=
+		 1  \text{ if team $t$ plays home in period $p$ in week 1} $
+
+
+\end{enumerate}
+
+
+
+\subsection{Objective function}
+The objective function minimizes the sum, over all the teams, of the difference between the total amount of home appearances and total amount of away appearances for each team. Same as CP.
+The number of all games played by a single team is odd (n-1, for n even). Hence, an optimal solution would result for half of the teams to appear a single time more at home than away, and the other half to appear exactly once more away than in home, result that offers the lower bound of n for the objective function. 
+
+% min($\sum_{i =1 }^{n}|\sum_{j \neq i}\sum_{m \in MATCHES}x[i,j,m] - \sum_{j \neq i}\sum_{m \in MATCHES}x[j,i,m] |)$)
+
+
+
+\[min(\sum_{i \in T }\left|\sum_{\substack{j \in T \\ j \neq i}}\sum_{m \in M}x[i,j,m] - \sum_{\substack{j \in T \\ j \neq i}}\sum_{m \in M}x[j,i,m] \right|))\]
+
+
+
+
+
+\subsection{Constraints}
+
+Main problem constraints
+\begin{itemize}
+    \item [\textbf{1.}] Each pair of teams should play exactly once:\\
+$\forall i,j \in T \ s.t. \ i< t \\ \sum_{m \in M}(x[i,j,m]+[i,j,m])=1   $
+\textit{\small{for the trivial models, instead of  $\forall i,j \in T \ s.t. \ i< t,  \forall i$ use of $j \in T \ s.t. \ i \neq t$}}
+\item [\textbf{2.}] Each team plays exactly once per week\\
+$\forall i \in T, w \in W : \sum_{p \in P} y[i,w,p] = 1$
+
+
+\item [\textbf{3.}] Each team plays at most twice in the same period across all weeks:\\
+$ \forall i \in T ,p \in P :\sum_{w \in W}(y[i,w,p])<=1  $
+\end{itemize}
+
+Implied and channeling constraints :
+\begin{itemize}
+    \item[\textbf{4.}]Each match has exactly one home team and one away team:\\
+$\forall m \in M : \ \sum_{i \in T}\sum_{\substack{i \in T}}(x[i,j,m])=1   $
+\item[\textbf{5.}]Each period accommodates exactly 2 teams (one match):\\
+$ \forall w \in W ,p \in P : \ \sum_{i \in T}(y[i,w,p])=2   $
+\item[\textbf{6.}]For connecting the main decision variables x with the auxilary variables y,h,a:
+$\forall i ,j \in T s.t. \ i\neq j, m \in M \ x[i,j,m] <= y[i, match\_to\_week[m], match\_to\_period[m]] $\\$
+\forall i ,j \in T s.t. \ i\neq j, m \in M \ x[i,j,m] <= y[j, match\_to\_week[m], match\_to\_period[m]] \\
+\forall i ,j \in T s.t. \ i\neq j, m \in M \ x[i,j,m] <= h[i, match\_to\_week[m], match\_to\_period[m]] \\
+\forall i ,j \in T s.t. \ i\neq j, m \in M \ x[i,j,m] <= a[i, match\_to\_week[m], match\_to\_period[m]]$
+
+\end{itemize}
+Symmetry breaking constraints:
+\begin{itemize}
+    \item[\textbf{(sb1)}] Fixing team $i$ to appear exactly once in period $i$ (for $i <= n/2$), \\
+$\forall i \in P \ \sum_{w \in W} y[i,w,i] = 1  $
+\item [\textbf{(sb2)}] Using aux variable $h_1$ and an assisting constraints to well-define the variable.
+$\forall p  \in P \ \sum_{i \in T}h_1[i,p]=1$ \\
+$\forall p \in P \ \sum_{i \in T}h_1[i,p]=1$ \\ 
+$\forall p \in P\ p{\scriptstyle \neq} n/2 \ \sum_{i \in T}i*h_1[i,p]<= \sum_{i \in T}i*h1[i,p+1] $
+    \item [\textbf{(sb3)}]Fixing the first match for 2vs3 $x[2,3,1]=1$
+
+    \item [\textbf{(sb4)}] Since there is no built-in in AMPL, we make use of aux variables and implied constraints for them to be well defined combinded with the descending parameters Weight[p] $ \forall p \in P, W[p]= (card(P) + 1 - p) * n$, where $card(P)=n/2$. \\
+For home teams:
+\[\forall w \in W, w\neq n-1 \sum_{p \in P}\sum_{i \in T}W[p]*i*h[i,p,w]<=\sum_{p \in P}\sum_{j \in T}W[p]*j*h[j,p,w] \]
+For away teams:
+$ \forall p \in P, W[p]= (card(P) + 1 - p) * n$, where card(P)=n/2.
+\[\forall w \in W, w\neq n-1\ \sum_{p \in P}\sum_{i \in T}W[p]*i*a[i,p,w]<=\sum_{p \in P}\sum_{j \in T}W[p]*j*a[j,p,w] \]
+
+    \item [\textbf{(sb5)}] $\forall m \in M \ \ x[2,1,m]<=x[1,2,m]$
+    
+
+\end{itemize}
+ 
+\subsection{Validation}
+
+\subsubsection{Experimental design}
+For the MIP approach, the technics used to approach best the most efficient model for decision or optimality, respectively,  are the following:
+\begin{itemize}
+    \item initialization of decision variables' values, warm-start (1)
+    \item symmetry breaking constrains \textbf{(sb1-sb5)}
+    \item lower bound of the objective function (2)
+\end{itemize}
+While navigating through models by combining several variations of the previous stated technics, we evaluate their contribution and aim to reach the most efficient model. We will be presenting 14 models, solved with 4 different solvers: Gurobi, IBM CPLEX, HiGHs and CBC.\\
+The choice of presenting all $14$ models $*4$ solvers, constraint us regarding time since obtaining all the results in sequence, running solely a python script, requires 12hours and 20 mins (17hr for also obtaining the results on instance n=16; this results are added only to highlight the limits of each approach, already known to not provide solutions).
+
+Decision approach models:\\
+\textbf{dec\_final\_model}: Our leading decision model, with (1), without \textbf{(sb1)}, \textbf{(sb2)} and lexicographic order \textbf{(sb4)} implimented only on n/2 first weeks \\
+\textbf{dec\_lexAwayDiscending}: the final model but in \textbf{(sb4)} lexicographically descending away teams (of first half teams)\\
+\textbf{dec\_with\_deficient\_without\_ascendingWeek1}: with \textbf{(sb1)}, \textbf{(sb4)} without \textbf{(sb2)} \\
+\textbf{dec\_withDef\_withWeek1}: with \textbf{(sb1)}, \textbf{(sb2)}, (1) , \textbf{(sb4)}\\
+\textbf{dec\_final\_without\_initial\_values}: without \textbf{(sb1)}, \textbf{(sb2)}, (1) with \textbf{(sb4)}\\
+\textbf{dec\_trivial}: Basic domain constraints
+
+Optimization approach models: \\
+\textbf{opt\_withoutDef\_withoutAscWeek1}: without \textbf{(sb1)},\textbf{(sb2)}, with (1),\textbf{(sb4)}\\
+\textbf{opt\_withoutDef\_withAscWeek1}:  without \textbf{(sb1)} with \textbf{(sb2)}, (1), \textbf{(sb4)}\\
+\textbf{opt\_withDef\_withoutAscWeek1}:  without \textbf{(sb2)}, with \textbf{(sb1)} (1), \textbf{(sb4)}\\
+\textbf{opt\_withDef\_withAscWeek1:}  with \textbf{(sb1)}, \textbf{(sb2)}, (1), \textbf{(sb4)}\\
+\textbf{opt\_without\_without\_initalHA}: without \textbf{(sb1)}, \textbf{(sb2)}, with (1) + initializing the home and away variables, \textbf{(sb4)}\\
+\textbf{opt\_noInitialvalues}: without \textbf{(sb1)},\textbf{(sb2)}, (1),with \textbf{(sb4)}\\
+\textbf{opt\_noBound}: without \textbf{(sb1)},\textbf{(sb2)}, (1) with \textbf{(sb4)}, and no lower bound for the objective function\\
+\textbf{opt\_trivial}: Basic domain constrains
+
+\subsubsection{Experimental results}
+\textit{UNS  }: for proved UNSAT, infeasibility of the problem \\
+\textit{-  :} for no solution on time \\
+\textit{int i $\in (0,300)$ }:for the time requiered to solve the instance by the solver,model\\
+\textit{dec\_withDefWithoutAscWeek1} stands for the model \textit{dec\_with\_deficient\_without\_ascendingWeek1 }
+
+\begin{table}[H]
+
+\begin{tabular}{| p{0.3cm}|p{0.9cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|}
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{dec\_final\_model}& \multicolumn{4}{|c|}{dec\_lexAwayDiscending}& \multicolumn{4}{|c|}{dec\_withDefWithoutAscWeek1}\\
+ \cline{2-13}
+  &  gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc\\
+ \hline
+ 4&  UNS& UNS& UNS&   UNS&  UNS& UNS& UNS&  UNS&  UNS& UNS& UNS&   UNS\\
+ 6&   0& 0&  0&  0&  0& 0& 0&  0&  0& 0& 0&       1\\
+ 8&   1&  0& 21&   34&  1& 0& 20& 33&  0& 1& 108&      55\\
+ 10&  24& 47&  -&   -&  23& 47& -& -&  7& 4& -&   -\\
+ 12&  61&  145&  -& -&  70& 146& -&  -&  129& -& -&     -\\
+ 14&  \textbf{56}&  -& -&  -&  \textbf{56}& -& -&  -&  -& -& -&   -\\
+ 16& - & - & - & - & - & -& -& - & - &- &- &-\\
+
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| p{0.35cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm} | }
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{dec\_withDef\_withWeek1}& \multicolumn{4}{|c|}{dec\_final\_without\_initial\_values}& \multicolumn{4}{|c|}{dec\_trivial}\\
+ \cline{2-13}
+  &  gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc\\
+ \hline
+ 4&  UNS& UNS& UNS&   UNS&  UNS& UNS& UNS&  UNS&  UNS& UNS& UNS&   UNS\\
+ 6&   0& 0&  0&  0&  0& 0& 0&  0&  0& 0& 0&       1\\
+ 8&   2&  1& 44&   101&  1& 0& 17& 21&  1& 0& 231&      7\\
+ 10&  58& 39&-&   \textcolor{green}{-}&  30& 44& -& -&  12& 20& -&   \textcolor{green}{\textbf{274}}\\
+ 12&  236&  -&  -& -&  63& 141& -&  -&  82& 3& -&     -\\
+ 14&  -&  -& -&  -&  -& -& -&  -&  -& -& -&   -\\
+ 16& - & - & - & - & - & -& -& - & - &- &- &-\\
+
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| p{0.35cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm} | }
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{opt\_withoutDef\_withoutAscWeek1}& \multicolumn{4}{|c|}{opt\_withoutDef\_withAscWeek1}& \multicolumn{4}{|c|}{opt\_withDef\_withoutAscWeek1}\\
+ \cline{2-13}
+  &  gurobi& cplex & highs & cbccbc& gurobi& cplex & highs & cbccbc& gurobi& cplex & highs & cbccbc\\
+ \hline
+ 4&  UNS& UNS& UNS&   UNS&  UNS& UNS& UNS&  UNS&  UNS& UNS& UNS&   UNS\\
+ 6&   0& 0&  1&  0&  0& 0& 2&  0&  0& 0& 4&       0\\
+ 8&   4&  1& 128&   38&  4& 1& 44& 52&  2& 2& 67&      -\\
+ 10&  235& 144&  -&   -&  114& 31& -& -&  26& 25& -&   -\\
+ 12&  129&  -&  -& -&  -& -& -&  -&  -& -& -&     -\\
+ 14&  -&  -& -&  -&  -& -& -&  -&  -& -& -&   -\\
+ 16& - & - & - & - & - & -& -& - & - &- &- &-\\
+
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| p{0.35cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm} | }
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{opt\_withDef\_withAscWeek1}& \multicolumn{4}{|c|}{opt\_without\_without\_initalHA}& \multicolumn{4}{|c|}{opt\_noInitialvalues}\\
+ \cline{2-13}
+  &  gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc\\
+ \hline
+ 4&  UNS& UNS& UNS&   UNS&  UNS& UNS& UNS&  UNS&  UNS& UNS& UNS&   UNS\\
+ 6&   0& 0&  2&  0&  0& 0& 3&  0&  0& 0& 1&       0\\
+ 8&   4&  1& 45&   52&  2& 2& 64& -&  4& 1& 127&      136\\
+ 10&  113& 31&  -&   -&  26& 23& -& -&  256& 158& -&   -\\
+ 12&  -&  -&  -& -&  -& -& -&  -&  115& -& -&     -\\
+ 14&  -&  -& -&  -&  -& -& -&  -&  -& -& -&   -\\
+ 16& - & - & - & - & - & -& -& - & - &- &- &-\\
+
+\hline
+\end{tabular}
+\end{table}
+\begin{table}[H]
+\centering
+\begin{tabular}{| p{0.35cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.7cm}| }
+ \hline
+ \multirow{2}{*}{n} & \multicolumn{4}{|c|}{opt\_noBound}& \multicolumn{4}{|c|}{opt\_trivial}\\
+ \cline{2-9}
+  &  gurobi& cplex & highs & cbc& gurobi& cplex & highs & cbc\\
+ \hline
+ 4&  UNS& UNS& UNS&   UNS&  UNS& UNS& UNS&  UNS\\
+ 6&   0& 0&  2&  -&  0& 0& 1&         -\\
+ 8&   7&  1& 48&   -&  2& 1& 136&       -\\
+ 10&  139& 11&  -&   -&  43& 129& -&  -\\
+ 12&  -&  -&  -& -&  -& -& -&       -\\
+ 14&  -&  -& -&  -&  -& -& -&       -\\
+ 16& - & - & - & - & - & -& -& - \\
+
+\hline
+\end{tabular}
+
+\caption{MIP models vs solvers , instances and runtime }
+\label{table:3}
+\end{table}
+
+
+\section{Conclusions}
+While the general formulation of the problem's model can be similar for all three approaches of CP, SMT and MIP, the formulation of symmetry breaking and channeling constraints and the effects from their implementation differed. Some symmetry breaking constraints which showed their effectiveness for some approaches, only lead to the increased runtime in the other.
+For those models where the implemented constraints have a non-negative effect on runtime, the time it takes to solve the problem can become greatly lower.
+Additionally, there is also a considerable effect caused by the choice of the solver, showing that the contribution of each symmetry breaking constraint depends on the different search strategies employed by the solver.
+On average, SMT performed better than CP, and MIP performed better in general.
+
+
+\section*{Authenticity and Author Contribution Statement}
+D.C. has developed the models and report for MIP, utilizing the online documentation of AMPL and  \cite{amplbook}. The article \cite{hamiez2008using} has been a crucial influence, encouraging to add constraints on the basis of the implied constraint on Deficient sets being allDifferent among periods.  On several occasions LLMs ChatGpt and Claude have been used as search engines to help acclimatize with the AMPL environment. 
+
+L.G. has developed the models and report for CP and assisted on the development of the Docker. 
+
+
+G.K. has developed the models and report for SMT, and mainly orchestrated the Docker. The works by Hamiez and Hao, 2008\cite{hamiez2008using} and by Subba and Stordal, 2021\cite{SubbaStordal2021} helped with the understanding of the problem's domain and with learning the existing approaches to constraining and optimizing it.
+
+Each team member has assisted others in their development of both models and the report. 
+
+
+\bibliographystyle{plain}
+\bibliography{cite.bib}
+
+\end{document}

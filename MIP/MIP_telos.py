@@ -4,7 +4,7 @@
 #$ python -m amplpy.modules install highs cbc gurobi
 
 # # Activate your license (e.g., free https://ampl.com/ce license)
-# $ python -m amplpy.modules activate "caf71c55-8ecf-4310-90e3-f0195364ecce"
+# $ python -m amplpy.modules activate "${AMPL_LICENSE_UUID}"
 
 import pandas as pd
 import numpy as np
@@ -15,7 +15,7 @@ import time
 import os
 import math
 import json
-ampl = ampl_notebook(modules=["highs", "cbc", "gurobi", "cplex"], license_uuid="caf71c55-8ecf-4310-90e3-f0195364ecce")
+ampl = ampl_notebook(modules=["highs", "cbc", "gurobi", "cplex"], license_uuid="${AMPL_LICENSE_UUID}")
 
 
 def solve_tournament(ampl, n_teams, solver='cplex', time_limit=300):

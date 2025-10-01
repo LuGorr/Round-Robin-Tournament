@@ -39,7 +39,7 @@ ENV PYTHONUNBUFFERED=1
 
 # Ideally, API codes should not be exposed like this
 RUN python3.11 -m amplpy.modules install highs cbc gurobi cplex && \
-    python3.11 -m amplpy.modules activate "caf71c55-8ecf-4310-90e3-f0195364ecce"
+    python3.11 -m amplpy.modules activate "${AMPL_LICENSE_UUID}"
 
 # Since these are CMD and not ENTRYPOINT, they will be overridden if the container is run with a different command.
 CMD ["/bin/bash", "-c", "/app/SMT/run_smt.sh && /app/CP/run_cp.sh && /app/MIP/run_mip.sh"]

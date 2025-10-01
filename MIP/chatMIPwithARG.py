@@ -7,7 +7,7 @@ import math
 import json
 from pathlib import Path
 
-ampl = ampl_notebook(modules=["highs", "cbc", "gurobi", "cplex"], license_uuid="caf71c55-8ecf-4310-90e3-f0195364ecce")
+ampl = ampl_notebook(modules=["highs", "cbc", "gurobi", "cplex"], license_uuid="${AMPL_LICENSE_UUID}")
 
 import argparse
 
