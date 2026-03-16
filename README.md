@@ -1,4 +1,4 @@
-# CDMO
+# Round Robin Tournament
 Various approches at round robin tournament solving.
 ##
 First, setup AMPL_LICENSE_UUID environment variable (for example in a local .env file) and then run source .env (to enter the local environment).
